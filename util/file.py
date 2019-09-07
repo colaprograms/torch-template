@@ -1,7 +1,5 @@
-import os, random, pickle, re
+import torch, os, os.path, random, pickle, re, PIL, skimage
 import numpy as np
-import PIL, skimage
-import torch
 
 TRAINING_PATH_POSSIBILITIES = [
   "/content/AI4Good---Meza-OCR-Challenge",
