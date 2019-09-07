@@ -25,6 +25,11 @@ class Test:
         self.fh = FileHolder()
         self.quiet = quiet
 
+    def beamsearch(self, paths):
+        inputs = file_list_to_tensor(paths)
+        logits = self.model(inputs).detach().cpu().numpy()
+        return [beamsearcher(logits[i, :, :], 8) for i in range(len(paths))]
+        
     def test(self):
         count = 0
         nimages = self.fh.nvalidation()
@@ -37,12 +42,7 @@ class Test:
                 path = labeled_file(filename)
                 paths += [path]
                 outputs.append(val)
-            inputs = file_list_to_tensor(paths)
-
-            logits = self.model(inputs)
-            logits = logits.detach().cpu().numpy()
-            for i in range(len(outputs)):
-                answer = beamsearcher(logits[i, :, :], 8)
+            for i, answer in enumerate(self.beamsearch(paths)):
                 if answer[0].str() != outputs[i]:
                     if not self.quiet:
                         print("%s image was wrong!" % nth(j + i))
@@ -56,7 +56,22 @@ class Test:
             i = j + len(outputs)
             print("Tested %3d/%d. %.2f%% correct" % (i, nimages, count/i*100))
         return count, nimages
-
+    
+    def allbeams(self):
+        nimages = self.fh.nvalidation()
+        BATCHSIZE = 64
+        answers = []
+        outputs = []
+        for j in range(0, nimages, BATCHSIZE):
+            paths = []
+            for filename, val in self.fh.info['validation'][j:j+BATCHSIZE]:
+                path = labeled_file(filename)
+                paths += [path]
+                outputs.append(val)
+            answers.extend(self.beamsearch(paths))
+            print("Done %3d/%d." % (len(outputs), nimages))
+        return answers
+        
     def classify_files(self, paths):
         inputs = file_list_to_tensor(paths)
         logits = self.model(inputs)
